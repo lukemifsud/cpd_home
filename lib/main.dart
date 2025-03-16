@@ -1,4 +1,6 @@
+import 'package:cpd_home/screens/home_screen.dart';
 import 'package:flutter/material.dart';
+
 
 void main() {
   runApp(const MainApp());
@@ -9,12 +11,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
+    return MaterialApp(
+      title: 'To-Do List',
+      theme: ThemeData(
+        primaryColor: Colors.green,
       ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const HomeScreen(),
+      },
     );
   }
 }
