@@ -2,6 +2,7 @@ import 'package:cpd_home/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/add_task_screen.dart';
 
 
 void main() async{
@@ -25,6 +26,7 @@ class MainApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const HomeScreen(),
+        '/add_task': (context) => const AddTaskScreen(),
       },
     );
   }
