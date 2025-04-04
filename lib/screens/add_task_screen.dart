@@ -35,10 +35,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
 
     final String formattedTime = _timeOfDay!.format(context);
+    final int timeValue = _timeOfDay!.hour * 60 + _timeOfDay!.minute;
 
     final Map<String, dynamic> taskData = {
       'description': taskText,
       'time': formattedTime,
+      'timeValue': timeValue,
       'createdAt': DateTime.now().toIso8601String(),
     };
 
