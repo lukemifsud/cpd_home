@@ -48,6 +48,7 @@ class DefaultFirebaseOptions {
     authDomain: 'todo-list-app-ce7b3.firebaseapp.com',
     storageBucket: 'todo-list-app-ce7b3.firebasestorage.app',
     measurementId: 'G-3VZRBHPHM4',
+    databaseURL: 'https://todo-list-app-ce7b3-default-rtdb.europe-west1.firebasedatabase.app/'
   );
 
   static const FirebaseOptions android = FirebaseOptions(

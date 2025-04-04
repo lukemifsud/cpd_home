@@ -10,12 +10,60 @@ class AddTaskScreen extends StatefulWidget {
 
 class _AddTaskScreenState extends State<AddTaskScreen> {
   final TextEditingController _taskController = TextEditingController();
+  TimeOfDay? _timeOfDay;
 
-  //reference to firebase database
-  final DatabaseReference _tasksRef = FirebaseDatabase.instance.ref('tasks');
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _timeOfDay ?? TimeOfDay.now(),
+    );
+    if (picked != null && picked != _timeOfDay) {
+      setState(() {
+        _timeOfDay = picked;
+      });
+    }
+  }
+
+  // Using callbacks instead of async/await
+  void _addTask() {
+    final String taskText = _taskController.text.trim();
+    if (taskText.isEmpty || _timeOfDay == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a task and select a time.')),
+      );
+      return;
+    }
+
+    final String formattedTime = _timeOfDay!.format(context);
+
+    final Map<String, dynamic> taskData = {
+      'description': taskText,
+      'time': formattedTime,
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+
+    final DatabaseReference tasksRef = FirebaseDatabase.instance.ref('tasks');
+
+    // .then(...) handles success; .catchError(...) handles failure
+    tasksRef.push().set(taskData).then((_) {
+      // Check if widget is still mounted
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task added successfully!')),
+      );
+      Navigator.pop(context);
+    }).catchError((error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error adding task: $error')),
+      );
+    });
+  }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Task'),
@@ -26,26 +74,39 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           children: [
             TextField(
               controller: _taskController,
-              decoration: const InputDecoration
-              (labelText: 'Task'),
+              decoration: const InputDecoration(
+                labelText: 'Task Description',
+                border: OutlineInputBorder(),
+              ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                 final taskText = _taskController.text.trim();
-                 if (taskText.isNotEmpty) {
-                   
-                  Navigator.pop(context);
-                  
-                  _tasksRef.push().set(taskText);
-                }
-              },
-              child: const Text('Add Task'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _timeOfDay == null
+                        ? 'No Time Selected'
+                        : 'Time: ${_timeOfDay!.format(context)}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => _selectTime(context),
+                  child: const Text('Select Time'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _addTask,
+                child: const Text('Add Task'),
+              ),
             ),
           ],
         ),
       ),
     );
-                     
   }
 }
