@@ -1,5 +1,7 @@
+//import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:geolocator/geolocator.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({super.key});
@@ -12,6 +14,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   final TextEditingController _taskController = TextEditingController();
   TimeOfDay? _timeOfDay;
 
+  // Callback-style function to pick a time
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -24,7 +27,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
-  // Using callbacks instead of async/await
+  // Non-async version of _addTask
   void _addTask() {
     final String taskText = _taskController.text.trim();
     if (taskText.isEmpty || _timeOfDay == null) {
@@ -37,6 +40,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     final String formattedTime = _timeOfDay!.format(context);
     final int timeValue = _timeOfDay!.hour * 60 + _timeOfDay!.minute;
 
+    // Basic task data (without location yet)
     final Map<String, dynamic> taskData = {
       'description': taskText,
       'time': formattedTime,
@@ -44,22 +48,35 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       'createdAt': DateTime.now().toIso8601String(),
     };
 
-    final DatabaseReference tasksRef = FirebaseDatabase.instance.ref('tasks');
+    // 1. Get the current location
+    getCurrentLocation().then((position) {
+      if (!mounted) return; // check if widget is still mounted
 
-    // .then(...) handles success; .catchError(...) handles failure
-    tasksRef.push().set(taskData).then((_) {
-      // Check if widget is still mounted
-      if (!mounted) return;
+      // 2. Attach latitude/longitude
+      taskData['latitude'] = position.latitude;
+      taskData['longitude'] = position.longitude;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task added successfully!')),
-      );
-      Navigator.pop(context);
+      // 3. Push to Firebase Realtime Database
+      final DatabaseReference tasksRef = FirebaseDatabase.instance.ref('tasks');
+      tasksRef.push().set(taskData).then((_) {
+        if (!mounted) return;
+
+        // Show success
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Task added successfully!')),
+        );
+        Navigator.pop(context);
+      }).catchError((error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding task: $error')),
+        );
+      });
     }).catchError((error) {
+      // If getCurrentLocation() failed or user denied permissions
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding task: $error')),
+        SnackBar(content: Text('Could not get location: $error')),
       );
     });
   }
@@ -111,4 +128,26 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       ),
     );
   }
+}
+
+// Our location helper method
+Future<Position> getCurrentLocation() async {
+  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    throw Exception('Location services are disabled.');
+  }
+
+  LocationPermission permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      throw Exception('Location permission denied.');
+    }
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    throw Exception('Location permission denied forever.');
+  }
+
+  return await Geolocator.getCurrentPosition();
 }
